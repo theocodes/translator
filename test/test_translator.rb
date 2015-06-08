@@ -1,5 +1,9 @@
 require 'minitest_helper'
 require 'translator'
+require 'translator/callable'
+require 'translator/local_callable'
+require 'translator/remote_callable'
+require 'translator/callable_request'
 
 module SomeApi
   module InnerModule
@@ -9,8 +13,8 @@ module SomeApi
   end
 end
 
-module SomethingElse
-  def self.run
+class SomethingElse
+  def run
     "returned other value"
   end
 end
@@ -19,14 +23,14 @@ class TestTranslator < Minitest::Test
 
   def setup
     @translator_one = Translator.configure do
-      service :some_api, local: 'SomeApi', remote: 'http://rest-api.com' do
-        endpoint :test_endpoint, local: 'InnerModule.run', remote: '/someapi/test'
+      service :some_api, namespace: 'SomeApi', base_url: 'http://rest-api.com/' do
+        endpoint :test_endpoint, local: 'InnerModule.run', remote: { path: '/something/:id', verb: :post, params: {id: 1}}
       end
     end
 
     @translator_two = Translator.configure do
       service :some_other_api do
-        endpoint :test_other_endpoint, local: 'SomethingElse.run', remote: 'http://someotherapi.com/test'
+        endpoint :test_other_endpoint, local: 'SomethingElse.new.run', remote: {}
       end
     end
   end
@@ -49,19 +53,68 @@ class TestTranslator < Minitest::Test
     assert_respond_to @translator_two.some_other_api, :test_other_endpoint
   end
 
-  def test_it_builds_local_callable
-    assert_equal @translator_one.some_api.test_endpoint.local_callable, 'SomeApi::InnerModule.run'
-    assert_equal @translator_two.some_other_api.test_other_endpoint.local_callable, 'SomethingElse.run'
+  def test_endpoint_returns_a_callable
+    assert_kind_of Translator::LocalCallable, @translator_one.some_api.test_endpoint.local_callable
+    assert_kind_of Translator::RemoteCallable, @translator_two.some_other_api.test_other_endpoint.remote_callable
   end
 
-  def test_it_builds_remote_callable
-    assert_equal @translator_one.some_api.test_endpoint.remote_callable, 'http://rest-api.com/someapi/test'
-    assert_equal @translator_two.some_other_api.test_other_endpoint.remote_callable, 'http://someotherapi.com/test'
+  def test_remote_callable_subject
+    assert_kind_of Translator::CallableRequest, @translator_two.some_other_api.test_other_endpoint.remote_callable.callable_subject
+    assert_equal @translator_one.some_api.test_endpoint.remote_callable.callable_subject.base_url, "http://rest-api.com/"
+    assert_equal @translator_one.some_api.test_endpoint.remote_callable.callable_subject.full_url, "http://rest-api.com/something/:id"
+    assert_equal @translator_one.some_api.test_endpoint.remote_callable.callable_subject.path, "/something/:id"
+    assert_equal @translator_one.some_api.test_endpoint.remote_callable.callable_subject.verb, :post
+    assert_equal @translator_one.some_api.test_endpoint.remote_callable.callable_subject.processed_url, "http://rest-api.com/something/1"
   end
 
-  def test_it_invokes_local
+  def test_it_takes_a_proc_for_local
+    my_proc = Proc.new do
+      SomeApi::InnerModule.run
+    end
+
+    my_translator = Translator.configure do
+      service :some_api, base_url: 'http://rest-api.com' do
+        endpoint :test_endpoint, local: my_proc, remote: {}
+      end
+    end
+    assert_equal my_translator.some_api.test_endpoint.call, "returned value"
+  end
+
+  def test_it_takes_string_for_local
     assert_equal @translator_one.some_api.test_endpoint.call, "returned value"
     assert_equal @translator_two.some_other_api.test_other_endpoint.call, "returned other value"
   end
+
+  def test_local_raises_with_invalid_type
+    assert_raises Translator::CallableTypeError do
+      Translator.configure do
+        service :some_api, base_url: 'http://rest-api.com' do
+          endpoint :test_endpoint, local: 2, remote: {}
+        end
+      end
+    end
+  end
+
+  def test_local_raises_with_invalid_string
+    translator = Translator.configure do
+      service :some_api, base_url: 'http://rest-api.com' do
+        endpoint :test_endpoint, local: 'SomeNonExistingClass.run', remote: {}
+      end
+    end
+    assert_raises Translator::StringNotEvalableError do
+      translator.some_api.test_endpoint.call
+    end
+  end
+
+  def test_remote_raises_with_anything_other_than_hash
+    assert_raises Translator::CallableTypeError do
+      Translator.configure do
+        service :some_api, base_url: 'http://rest-api.com' do
+          endpoint :test_endpoint, local: 2, remote: 'stupid_string'
+        end
+      end
+    end
+  end
+
 
 end

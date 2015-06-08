@@ -13,11 +13,11 @@ module Translator
     #
     # @since 0.1.0
 
-    attr_reader :name, :local, :remote
+    attr_reader :name, :namespace, :base_url
 
     def initialize(name, options = {})
       @name = name
-      @local, @remote = options.values_at(:local, :remote)
+      @namespace, @base_url = options.values_at(:namespace, :base_url)
     end
 
     # Gets the registered services.
@@ -41,7 +41,7 @@ module Translator
     #   require 'translator'
     #
     #   translator = Translator.configure do
-    #     service :auth, local: 'Authentication', remote: 'http://securesite.com/auth' do
+    #     service :auth, namespace: 'Authentication', base_url: 'http://securesite.com/auth' do
     #       endpoint :login, local: 'Login.attempt(params)', 'attempt'
     #     end
     #   end

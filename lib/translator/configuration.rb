@@ -28,8 +28,8 @@ module Translator
     #
     # @since 0.1.0
 
-    def service(name, local: nil, remote: nil, &blk)
-      svc = Translator::Service.new(name, local: local, remote: remote)
+    def service(name, namespace: nil, base_url: nil, &blk)
+      svc = Translator::Service.new(name, namespace: namespace, base_url: base_url)
       svc.instance_eval(&blk)
       register_service(svc)
     end

@@ -21,7 +21,7 @@ module Translator
         # @since 0.1.0
         #
         # @example
-        #   require 'lotus/utils/class_attribute'
+        #   require 'utils/utils'
         #
         #   class Vehicle
         #     include Lotus::Utils::ClassAttribute

@@ -1,0 +1,8 @@
+# Deployment config example
+
+node_one:
+  - auth
+  - web
+
+node_two:
+  - awards

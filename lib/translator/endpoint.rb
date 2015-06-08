@@ -1,3 +1,6 @@
+require 'translator/local_callable'
+require 'translator/remote_callable'
+
 module Translator
   class Endpoint
 
@@ -12,11 +15,12 @@ module Translator
     #
     # @since 0.1.0
 
-    attr_reader :name, :service, :local, :remote
+    attr_reader :name, :service, :local_callable, :remote_callable
 
     def initialize(name, service, options = {})
       @name, @service = name, service
-      @local, @remote = options.values_at(:local, :remote)
+      @local_callable = LocalCallable.new service.namespace, options.values_at(:local).first
+      @remote_callable = RemoteCallable.new service.base_url, options.values_at(:remote).first
     end
 
     # Builds the string for eval, calling local endpoints.
@@ -25,9 +29,15 @@ module Translator
     #
     # @since 0.1.0
 
-    def local_callable
-      @local_callable ||= service.local.nil? ? local : "#{service.local}::#{local}"
-    end
+    # def local_callable
+    #
+    #
+    #   # if local.is_a? String
+    #   #   @local_callable ||= service.namespace.nil? ? local : "#{service.namespace}::#{local}"
+    #   # elsif local.is_a? Proc
+    #   #
+    #   # end
+    # end
 
     # Builds the string url for the http request.
     #
@@ -35,9 +45,9 @@ module Translator
     #
     # @since 0.1.0
 
-    def remote_callable
-      @remote_callable ||= service.remote.nil? ? remote : "#{service.remote}/#{remote}".gsub(/([^:])\/\//, '\1/')
-    end
+    # def remote_callable
+    #   @remote_callable ||= service.base_url.nil? ? remote : "#{service.base_url}#{remote}".gsub(/([^:])\/\//, '\1/')
+    # end
 
     # The method that perform the action independently of the endpoint_type.
     #
@@ -48,7 +58,7 @@ module Translator
     def call(endpoint_type = nil)
       # TODO: Needs to figure out whether it should call remote or local
       begin
-        eval "call_#{endpoint_type.to_s}"
+        instance_eval "call_#{endpoint_type.to_s}"
       rescue NameError
         call_local
       end
@@ -61,7 +71,7 @@ module Translator
     # @since 0.1.0
 
     def call_local
-      eval local_callable
+      local_callable.call
     end
 
     # @return [Unknown] This will dynamically return whatever the eval returns
@@ -69,7 +79,7 @@ module Translator
     # @since 0.1.0
 
     def call_remote
-      # TODO: What does it mean to call remote? Http is the answer...
+      remote_callable.call
     end
 
   end
