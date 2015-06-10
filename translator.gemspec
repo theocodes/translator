@@ -34,4 +34,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'minitest-reporters'
 
   spec.add_development_dependency 'byebug'
+  spec.add_development_dependency 'rest-client'
+  spec.add_development_dependency 'sinatra'
+  spec.add_development_dependency 'sinatra-contrib'
 end

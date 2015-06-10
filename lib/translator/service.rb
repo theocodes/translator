@@ -96,8 +96,8 @@ module Translator
     #   translator.some_api.name
 
     def register_method(endpoint)
-      self.define_singleton_method(endpoint.name) do
-        endpoint
+      self.define_singleton_method(endpoint.name) do |*args|
+        endpoint.call(args)
       end
     end
 

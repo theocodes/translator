@@ -3,8 +3,8 @@ require 'translator/callable_string'
 module Translator
   class Callable
 
-    def call
-      callable_subject.call
+    def call(data)
+      raise "Must implement call(data)"
     end
 
   end

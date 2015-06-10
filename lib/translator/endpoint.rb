@@ -39,15 +39,13 @@ module Translator
     #   # end
     # end
 
-    # Builds the string url for the http request.
-    #
-    # @return [String] the callable
-    #
-    # @since 0.1.0
+    def remote
+      remote_callable
+    end
 
-    # def remote_callable
-    #   @remote_callable ||= service.base_url.nil? ? remote : "#{service.base_url}#{remote}".gsub(/([^:])\/\//, '\1/')
-    # end
+    def local
+      local_callable
+    end
 
     # The method that perform the action independently of the endpoint_type.
     #
@@ -55,31 +53,13 @@ module Translator
     #
     # @since 0.1.0
 
-    def call(endpoint_type = nil)
-      # TODO: Needs to figure out whether it should call remote or local
-      begin
-        instance_eval "call_#{endpoint_type.to_s}"
-      rescue NameError
-        call_local
+    def call(args)
+      if args.empty?
+        self
+      else
+        # TODO: Add logic for dynamically calling local/remote based on deploy config
+        local_callable.call(args[0])
       end
-    end
-
-    private
-
-    # @return [Unknown] This will dynamically return whatever the eval returns
-    #
-    # @since 0.1.0
-
-    def call_local
-      local_callable.call
-    end
-
-    # @return [Unknown] This will dynamically return whatever the eval returns
-    #
-    # @since 0.1.0
-
-    def call_remote
-      remote_callable.call
     end
 
   end
