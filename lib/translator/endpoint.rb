@@ -1,5 +1,5 @@
-require 'translator/local_callable'
-require 'translator/remote_callable'
+require 'translator/callable/callable_object'
+require 'translator/callable/callable_request'
 
 module Translator
   class Endpoint
@@ -18,9 +18,10 @@ module Translator
     attr_reader :name, :service, :local_callable, :remote_callable
 
     def initialize(name, service, options = {})
+      # TODO: Support for custom callables
       @name, @service = name, service
-      @local_callable = LocalCallable.new service.namespace, options.values_at(:local).first
-      @remote_callable = RemoteCallable.new service.base_url, options.values_at(:remote).first
+      @local_callable = Callable.new service.namespace, options.values_at(:local).first, Translator::CallableObject
+      @remote_callable = Callable.new service.base_url, options.values_at(:remote).first, Translator::CallableRequest
     end
 
     # Builds the string for eval, calling local endpoints.
@@ -39,12 +40,20 @@ module Translator
     #   # end
     # end
 
-    def remote
-      remote_callable.callable_subject
+    def remote(*args)
+      if args.empty?
+        remote_callable.callable_object
+      else
+        remote_callable.callable_object.call(args[0])
+      end
     end
 
-    def local
-      local_callable
+    def local(*args)
+      if args.empty?
+        local_callable.callable_object
+      else
+        local_callable.callable_object.call(args[0])
+      end
     end
 
     # The method that perform the action independently of the endpoint_type.
@@ -58,6 +67,7 @@ module Translator
         self
       else
         # TODO: Add logic for dynamically calling local/remote based on deploy config
+        raise "Is it local? Is it remote? Who is to say?!"
         local_callable.call(args[0])
       end
     end

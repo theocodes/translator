@@ -1,25 +1,29 @@
 require 'minitest_helper'
 require 'translator'
-require 'translator/callable'
-require 'translator/local_callable'
-require 'translator/remote_callable'
-require 'translator/callable_request'
+require 'translator/callable/callable'
+require 'translator/callable/callable_request'
 require 'json'
 
 # Test subject
 require_relative 'test_api/test_api.rb'
 
+# Note: Test server must be running (test/test_api).
+# While it's not ideal to create such dependency for testing,
+# it is vital that remote callable gets tested that it maps to the right
+# HTTP verb, passed params etc.
+#
+# To run it, install shotgun, go to /test/test_api/ and run shotgun :)
+
 class TestTranslator < Minitest::Test
   include TestApi
 
   def setup
-
     @translator = Translator.configure do
       service :test_api, namespace: 'TestApi', base_url: 'http://localhost:9393/test-api/' do
         endpoint :get_test, local: { object: 'App', method: :get_test }, remote: { path: '/get_test/:id', verb: :get }
+        endpoint :post_test, local: { object: 'App', method: :post_test }, remote: { path: '/post_test/:id', verb: :post }
       end
     end
-
   end
 
   def test_that_it_has_a_version_number
@@ -39,46 +43,22 @@ class TestTranslator < Minitest::Test
   end
 
   def test_endpoint_returns_a_local_callable
-    assert_kind_of Translator::LocalCallable, @translator.test_api.get_test.local
+    assert_kind_of Translator::CallableObject, @translator.test_api.get_test.local
+  end
+
+  def test_endpoint_returns_a_remote_callable
+    assert_kind_of Translator::CallableRequest, @translator.test_api.get_test.remote
   end
 
   def test_remote_callable_subject
-    byebug
     assert_equal @translator.test_api.get_test.remote.base_url, "http://localhost:9393/test-api/"
     assert_equal @translator.test_api.get_test.remote.full_raw_url, "http://localhost:9393/test-api/get_test/:id"
     assert_equal @translator.test_api.get_test.remote.path, "/get_test/:id"
     assert_equal @translator.test_api.get_test.remote.verb, :get
-    assert_equal @translator.test_api.get_test.remote.processed_url( url_params: {:id => 1}), "http://localhost:9393/test-api/get_test/1"
-  end
-
-  def test_it_raises_with_unknown_params
-    skip
-    assert_raises Translator::UnknownParamError do
-      @translator.test_api.get_test.remote.processed_url( url_params: {:not_declared => 1})
-    end
-  end
-
-  def test_it_takes_a_proc_for_local
-    skip
-    my_proc = Proc.new do
-      TestApi::App.new.get_test(1)
-    end
-
-    my_translator = Translator.configure do
-      service :test_api do
-        endpoint :test_endpoint, local: my_proc
-      end
-    end
-    assert_equal my_translator.test_api.get_test.call, { success: true, id: 1 }
-  end
-
-  def test_it_takes_string_for_local
-    skip
-    assert_equal Lotus::Awards.adapter.test_api.get_test.call({id: 1, name: 'someti'}) , { success: true }
+    assert_equal @translator.test_api.get_test.remote.processed_url({:id => 1}), "http://localhost:9393/test-api/get_test/1"
   end
 
   def test_local_raises_with_invalid_type
-    skip
     assert_raises Translator::CallableTypeError do
       Translator.configure do
         service :some_api, base_url: 'http://rest-api.com' do
@@ -88,36 +68,38 @@ class TestTranslator < Minitest::Test
     end
   end
 
-  def test_local_raises_with_invalid_string
-    skip
-    translator = Translator.configure do
-      service :some_api, base_url: 'http://rest-api.com' do
-        endpoint :test_endpoint, local: 'SomeNonExistingClass.run', remote: {}
-      end
-    end
-    assert_raises Translator::StringNotEvalableError do
-      translator.some_api.test_endpoint.call
-    end
-  end
-
-  def test_remote_raises_with_anything_other_than_hash
-    skip
+  def test_remote_raises_with_invalid_type
     assert_raises Translator::CallableTypeError do
       Translator.configure do
-        service :some_api, base_url: 'http://rest-api.com' do
-          endpoint :test_endpoint, local: 2, remote: 'stupid_string'
+        service :some_api, namespace: 'TestApi', base_url: 'http://rest-api.com' do
+          endpoint :test_endpoint, local: { object: 'App', method: 'get_test' }, remote: "wrong type"
         end
       end
     end
   end
 
   def test_get_local
-    result = { success: true, id: 1, role: 'admin' }
-    assert_equal result, @translator.test_api.get_test({ id: 1, role: 'admin'}, type: 'local')
+    assert_equal({ success: true, id: 1, role: 'admin' }, @translator.test_api.get_test.local({ id: 1, role: 'admin'}))
+  end
+
+  def test_post_local
+    assert_equal({ success: true, id: 1, role: 'monkey' }, @translator.test_api.post_test.local({ id: 1, role: 'monkey'}))
   end
 
   def test_get_remote
-    skip
+    result = JSON.parse(@translator.test_api.get_test.remote({ id: 1, role: 'admin'}))
+    assert_equal true, result["success"]
+    assert_equal 1, result["id"].to_i
+    assert_equal 'admin', result["role"]
   end
+
+  def test_post_remote
+    result = JSON.parse(@translator.test_api.post_test.remote({ id: 1, role: 'admin'}))
+    assert_equal true, result["success"]
+    assert_equal 1, result["id"].to_i
+    assert_equal 'admin', result["role"]
+  end
+
+
 
 end

@@ -1,9 +1,5 @@
-require 'translator/callable'
-require 'translator/callable_string'
-require 'byebug'
-
 module Translator
-  class LocalCallable < Callable
+  class CallableObject
 
     attr_reader :object, :method, :constant
 

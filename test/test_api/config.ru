@@ -1,2 +1,2 @@
-require File.expand_path '../test_server.rb', __FILE__
-run TestServer
+require File.expand_path '../test_api.rb', __FILE__
+run TestApi::Server
