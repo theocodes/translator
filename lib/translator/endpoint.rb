@@ -40,7 +40,7 @@ module Translator
     # end
 
     def remote
-      remote_callable
+      remote_callable.callable_subject
     end
 
     def local

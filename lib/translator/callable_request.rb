@@ -2,7 +2,7 @@ require 'byebug'
 require 'rest-client'
 
 module Translator
-  class LocalCallable
+  class CallableRequest
 
     attr_reader :base_url, :full_raw_url, :path, :verb
     attr_accessor :params, :body
