@@ -7,38 +7,40 @@ module Translator
     # An Endpoint is responsible for local and remote actions.
     #
     # @param name [Symbol] the endpoint name
-    # @param service [Translator::Service] the parent service
-
+    # @param service [Translator::Service] the service in which the endpoint belongs
     # @param options [Hash]
-    # @option options [String] :local Endpoint local address
-    # @option options [String] :remote Endpoint remote address
+    #   @option options[:local] [Hash] options for local configuration (object, method, callable_object)
+    #   @option options[:remote] [Hash] options for remote configuration (path, verb, callable_object)
     #
     # @since 0.1.0
 
     attr_reader :name, :service, :local_callable, :remote_callable
 
     def initialize(name, service, options = {})
-      # TODO: Support for custom callables
       @name, @service = name, service
-      @local_callable = Callable.new service.namespace, options.values_at(:local).first, Translator::CallableObject
-      @remote_callable = Callable.new service.base_url, options.values_at(:remote).first, Translator::CallableRequest
+      begin
+        @local_callable = Callable.new service.namespace, options[:local], Translator::CallableObject
+      rescue NameError
+        @local_callable = NonLocalCallable.new options[:local]
+      end
+      @remote_callable = Callable.new service.base_url, options[:remote], Translator::CallableRequest
     end
 
-    # Builds the string for eval, calling local endpoints.
+
+    def constantize(namespace, obj)
+      Object.const_get(namespace ? "#{namespace}::#{obj}" : obj)
+    end
+
+    # This bypasses deploy config and calls the 'remote' version of the endpoint (http)
+    # passing args to it.
     #
-    # @return [String] the callable
+    # OR
+    #
+    # When called without args, will return the remote [Translator::CallableRequest]
+    #
+    # @param args [Hash] args to be passed into the endpoint
     #
     # @since 0.1.0
-
-    # def local_callable
-    #
-    #
-    #   # if local.is_a? String
-    #   #   @local_callable ||= service.namespace.nil? ? local : "#{service.namespace}::#{local}"
-    #   # elsif local.is_a? Proc
-    #   #
-    #   # end
-    # end
 
     def remote(*args)
       if args.empty?
@@ -48,6 +50,17 @@ module Translator
       end
     end
 
+    # This bypasses deploy config and calls the 'local' version of the endpoint
+    # passing args to it.
+    #
+    # OR
+    #
+    # When called without args, will return the remote [Translator::CallableObject]
+    #
+    # @param args [Hash] args to be passed into the endpoint
+    #
+    # @since 0.1.0
+
     def local(*args)
       if args.empty?
         local_callable.callable_object
@@ -56,9 +69,9 @@ module Translator
       end
     end
 
-    # The method that perform the action independently of the endpoint_type.
+    # Called internally when endpoint is called with arguments
     #
-    # @return [Unknown] This will dynamically return whatever the eval returns
+    # @return [Unknown] This will dynamically return whatever the endpoint returns
     #
     # @since 0.1.0
 
@@ -73,4 +86,23 @@ module Translator
     end
 
   end
+
+  class NonLocalCallable
+
+    attr_reader :method, :object
+
+    def initialize(options)
+      @object, @method = options.values_at(:object, :method)
+    end
+
+    def call(data)
+      raise "Endpoint isn't local!"
+    end
+
+    def callable_object
+      self
+    end
+  end
+
+
 end

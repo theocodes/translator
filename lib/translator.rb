@@ -22,7 +22,7 @@ module Translator
   #
   #   Translator.configure do
   #     service :some_api do
-  #       endpoint :name, local: SomeClass.new(params).run
+  #       endpoint :name, local: { object: 'ObjectName', method: :method_name }, remote: { path: 'path/:param', verb: :http_verb }
   #     end
   #   end
 

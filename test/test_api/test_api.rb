@@ -17,15 +17,39 @@ module TestApi
       json App.new.post_test(params["data"])
     end
 
+    put '/test-api/update_test/:id' do
+      json App.new.update_test(params["data"])
+    end
+
+    delete '/test-api/delete_test/:id' do
+      json App.new.delete_test({id:params["id"]})
+    end
+
+    post '/some-other-api/login/:id' do
+      json App.new.login(params["data"])
+    end
+
   end
 
   class App
 
     def get_test(data)
-      { success: true, id: data[:id], role: 'admin' }
+      { success: true, id: data[:id], role: 'get_test' }
     end
 
     def post_test(data)
+      { success: true, id: data[:id], role: data[:role] }
+    end
+
+    def update_test(data)
+      { success: true, id: data[:id], role: data[:role] }
+    end
+
+    def delete_test(data)
+      { success: true, id: data[:id], role: 'delete_test' }
+    end
+
+    def login(data)
       { success: true, id: data[:id], role: data[:role] }
     end
 

@@ -6,16 +6,16 @@ module Translator
     # Public interface for registering a service.
     #
     # @param name [Symbol] service name
-    # @param local [String] a namespace for a callable (optional)
-    # @param remote [String] a namespace for a url (optional)
+    # @param namespace [String] a namespace for a local callable (optional)
+    # @param base_url [String] base url to be used for remote requests
     # @param blk [Proc] the configuration block
     #
     # @example
     #   require 'translator'
     #
     #   translator = Translator.configure do
-    #     service :some_api, local: 'SomeApi', remote: 'http://mysite.com/some-api' do
-    #       endpoint :name, local: SomeClass.some_method, 'some-url'
+    #     service :some_api, namespace: 'SomeApi', base_url: 'http://mysite.com/some-api' do
+    #       endpoint :name, local: SomeClass.some_method, '/some-url'
     #     end
     #   end
     #

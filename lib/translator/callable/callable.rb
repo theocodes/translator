@@ -1,6 +1,16 @@
 module Translator
   class Callable
 
+    # Callable wraps a 'callable object'
+    #
+    # @param namespace [String] a namespace for a given endpoint
+    # @param options [Hash] options to be passed to a callable object
+    #
+    # @see Translator::CallableObject
+    # @see Translator::CallableRequest
+    #
+    # @since 0.1.0
+
     attr_reader :callable_object
 
     def initialize(namespace, options, callable)
@@ -12,11 +22,19 @@ module Translator
       end
     end
 
-    def call(data)
+    # Callables must implement call to be considered valid
+    #
+    # @param data [Hash] hash to be passed to endpoint
+    #
+    # @since 0.1.0
+
+    def calls(data)
       raise "Must implement call(data)"
     end
 
   end
+
+  # @since 0.1.0
 
   class CallableArgumentMissingError < ::StandardError
     def initialize(klass)
